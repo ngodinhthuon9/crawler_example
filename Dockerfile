@@ -15,7 +15,7 @@ ENV MIX_ENV=prod
 # install mix dependencies
 COPY mix.exs mix.lock ./
 COPY config config
-RUN export SECRET_KEY_BASE = mix phx.gen.secret
+RUN export SECRET_KEY_BASE = "E+adisY4Yd1oBlje0lgPdxvQnAhvHhGPDBUPYS+uZLi5M8h6KN14kgytGgeKIihV"
 RUN mix do deps.get, deps.compile
 
 # build assets
