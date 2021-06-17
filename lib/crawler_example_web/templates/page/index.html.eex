@@ -1,0 +1,53 @@
+<div class="phx-hero">
+  <!-- Control the column width, and how they should appear on different devices -->
+  <div class="wrapper">
+    <div class="header_left">
+      <a href="https://shopee.vn">
+        <img src="https://seeklogo.com/images/S/shopee-logo-DD5CAE562A-seeklogo.com.png" class="mx-auto d-block" alt="Cinque Terre" width="200" height="200"/>
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <h1>Apple Flagship Store </h1>
+    </div>
+  </div>
+
+  <hr />
+  <div class="row">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width: 30%">Products:</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= for item <- @stats do %>
+          <tr>
+            <td>
+              <a href=" <%= item.url %> " target="_blank">
+              <figure>
+                <img src="<%= item.image %>" class="mx-auto d-block" alt="Cinque Terre" width="200" height="200">
+              </figure>
+              </a>
+            </td>
+            <td>
+            <a href=" <%= item.url %> " target="_blank">
+            <figcaption> <%= item.name %> </figcaption>
+            </a>
+            <br/>
+            <span class="badge badge-success">
+            <script>
+              var price = new Number(<%= item.price %>).toLocaleString("vn-Vi");
+              document.write(price + " VND");
+            </script>
+            </span>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
