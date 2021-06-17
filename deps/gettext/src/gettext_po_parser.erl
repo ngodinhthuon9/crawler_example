@@ -18,7 +18,7 @@ extract_plural_form({{plural_form, _Line, PluralForm}, String}) ->
 add_comments_to_translation({TranslationType, Translation}, Comments) ->
   {TranslationType, maps:put(comments, Comments, Translation)}.
 
--file("c:/Program Files/erl10.7/lib/parsetools-2.1.8/include/yeccpre.hrl", 0).
+-file("/usr/local/Cellar/erlang/24.0.2/lib/erlang/lib/parsetools-2.3/include/yeccpre.hrl", 0).
 %%
 %% %CopyrightBegin%
 %%
@@ -46,15 +46,15 @@ add_comments_to_translation({TranslationType, Translation}, Comments) ->
 
 -spec parse(Tokens :: list()) -> yecc_ret().
 parse(Tokens) ->
-    yeccpars0(Tokens, {no_func, no_line}, 0, [], []).
+    yeccpars0(Tokens, {no_func, no_location}, 0, [], []).
 
 -spec parse_and_scan({function() | {atom(), atom()}, [_]}
                      | {atom(), atom(), [_]}) -> yecc_ret().
 parse_and_scan({F, A}) ->
-    yeccpars0([], {{F, A}, no_line}, 0, [], []);
+    yeccpars0([], {{F, A}, no_location}, 0, [], []);
 parse_and_scan({M, F, A}) ->
     Arity = length(A),
-    yeccpars0([], {{fun M:F/Arity, A}, no_line}, 0, [], []).
+    yeccpars0([], {{fun M:F/Arity, A}, no_location}, 0, [], []).
 
 -spec format_error(any()) -> [char() | list()].
 format_error(Message) ->
@@ -68,9 +68,9 @@ format_error(Message) ->
 %% To be used in grammar files to throw an error message to the parser
 %% toplevel. Doesn't have to be exported!
 -compile({nowarn_unused_function, return_error/2}).
--spec return_error(integer(), any()) -> no_return().
-return_error(Line, Message) ->
-    throw({error, {Line, ?MODULE, Message}}).
+-spec return_error(erl_anno:location(), any()) -> no_return().
+return_error(Location, Message) ->
+    throw({error, {Location, ?MODULE, Message}}).
 
 -define(CODE_VERSION, "1.4").
 
@@ -85,7 +85,7 @@ yeccpars0(Tokens, Tzr, State, States, Vstack) ->
             catch _:_ -> erlang:raise(error, Error, Stacktrace)
             end;
         %% Probably thrown from return_error/2:
-        throw: {error, {_Line, ?MODULE, _M}} = Error ->
+        throw: {error, {_Location, ?MODULE, _M}} = Error ->
             Error
     end.
 
@@ -102,22 +102,22 @@ yecc_error_type(function_clause, [{?MODULE,F,ArityOrArgs,_} | _]) ->
 
 yeccpars1([Token | Tokens], Tzr, State, States, Vstack) ->
     yeccpars2(State, element(1, Token), States, Vstack, Token, Tokens, Tzr);
-yeccpars1([], {{F, A},_Line}, State, States, Vstack) ->
+yeccpars1([], {{F, A},_Location}, State, States, Vstack) ->
     case apply(F, A) of
-        {ok, Tokens, Endline} ->
-            yeccpars1(Tokens, {{F, A}, Endline}, State, States, Vstack);
-        {eof, Endline} ->
-            yeccpars1([], {no_func, Endline}, State, States, Vstack);
-        {error, Descriptor, _Endline} ->
+        {ok, Tokens, EndLocation} ->
+            yeccpars1(Tokens, {{F, A}, EndLocation}, State, States, Vstack);
+        {eof, EndLocation} ->
+            yeccpars1([], {no_func, EndLocation}, State, States, Vstack);
+        {error, Descriptor, _EndLocation} ->
             {error, Descriptor}
     end;
-yeccpars1([], {no_func, no_line}, State, States, Vstack) ->
+yeccpars1([], {no_func, no_location}, State, States, Vstack) ->
     Line = 999999,
     yeccpars2(State, '$end', States, Vstack, yecc_end(Line), [],
               {no_func, Line});
-yeccpars1([], {no_func, Endline}, State, States, Vstack) ->
-    yeccpars2(State, '$end', States, Vstack, yecc_end(Endline), [],
-              {no_func, Endline}).
+yeccpars1([], {no_func, EndLocation}, State, States, Vstack) ->
+    yeccpars2(State, '$end', States, Vstack, yecc_end(EndLocation), [],
+              {no_func, EndLocation}).
 
 %% yeccpars1/7 is called from generated code.
 %%
@@ -128,21 +128,19 @@ yeccpars1([], {no_func, Endline}, State, States, Vstack) ->
 yeccpars1(State1, State, States, Vstack, Token0, [Token | Tokens], Tzr) ->
     yeccpars2(State, element(1, Token), [State1 | States],
               [Token0 | Vstack], Token, Tokens, Tzr);
-yeccpars1(State1, State, States, Vstack, Token0, [], {{_F,_A}, _Line}=Tzr) ->
+yeccpars1(State1, State, States, Vstack, Token0, [], {{_F,_A}, _Location}=Tzr) ->
     yeccpars1([], Tzr, State, [State1 | States], [Token0 | Vstack]);
-yeccpars1(State1, State, States, Vstack, Token0, [], {no_func, no_line}) ->
-    Line = yecctoken_end_location(Token0),
+yeccpars1(State1, State, States, Vstack, Token0, [], {no_func, no_location}) ->
+    Location = yecctoken_end_location(Token0),
     yeccpars2(State, '$end', [State1 | States], [Token0 | Vstack],
-              yecc_end(Line), [], {no_func, Line});
-yeccpars1(State1, State, States, Vstack, Token0, [], {no_func, Line}) ->
+              yecc_end(Location), [], {no_func, Location});
+yeccpars1(State1, State, States, Vstack, Token0, [], {no_func, Location}) ->
     yeccpars2(State, '$end', [State1 | States], [Token0 | Vstack],
-              yecc_end(Line), [], {no_func, Line}).
+              yecc_end(Location), [], {no_func, Location}).
 
 %% For internal use only.
-yecc_end({Line,_Column}) ->
-    {'$end', Line};
-yecc_end(Line) ->
-    {'$end', Line}.
+yecc_end(Location) ->
+    {'$end', Location}.
 
 yecctoken_end_location(Token) ->
     try erl_anno:end_location(element(2, Token)) of
@@ -190,7 +188,7 @@ yecctoken2string(Other) ->
 
 
 
--file("src/gettext_po_parser.erl", 193).
+-file("src/gettext_po_parser.erl", 191).
 
 -dialyzer({nowarn_function, yeccpars2/7}).
 yeccpars2(0=S, Cat, Ss, Stack, T, Ts, Tzr) ->
@@ -253,7 +251,8 @@ yeccpars2_0(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_3(3, Cat, [0 | Ss], NewStack, T, Ts, Tzr).
 
 yeccpars2_1(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccgoto_grammar(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
+ NewStack = yeccpars2_1_(Stack),
+ yeccgoto_grammar(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_2/7}).
 yeccpars2_2(_S, '$end', _Ss, Stack, _T, _Ts, _Tzr) ->
@@ -430,129 +429,137 @@ yeccgoto_translations(6=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
 -file("src/gettext_po_parser.yrl", 46).
 yeccpars2_0_(__Stack0) ->
  [begin
-   [ ]
+             []
   end | __Stack0].
+
+-compile({inline,yeccpars2_1_/1}).
+-file("src/gettext_po_parser.yrl", 3).
+yeccpars2_1_(__Stack0) ->
+ [___1 | __Stack] = __Stack0,
+ [begin
+                 ___1
+  end | __Stack].
 
 -compile({inline,'yeccpars2_3_\'$end\''/1}).
 -file("src/gettext_po_parser.yrl", 10).
 'yeccpars2_3_\'$end\''(__Stack0) ->
- [__1 | __Stack] = __Stack0,
+ [___1 | __Stack] = __Stack0,
  [begin
-   [ ]
+             []
   end | __Stack].
 
 -compile({inline,yeccpars2_3_/1}).
 -file("src/gettext_po_parser.yrl", 51).
 yeccpars2_3_(__Stack0) ->
  [begin
-   nil
+             nil
   end | __Stack0].
 
 -compile({inline,yeccpars2_4_/1}).
 -file("src/gettext_po_parser.yrl", 46).
 yeccpars2_4_(__Stack0) ->
  [begin
-   [ ]
+             []
   end | __Stack0].
 
 -compile({inline,yeccpars2_5_/1}).
 -file("src/gettext_po_parser.yrl", 48).
 yeccpars2_5_(__Stack0) ->
- [__2,__1 | __Stack] = __Stack0,
+ [___2,___1 | __Stack] = __Stack0,
  [begin
-   [ extract_simple_token ( __1 ) | __2 ]
+                     [extract_simple_token(___1)|___2]
   end | __Stack].
 
 -compile({inline,yeccpars2_6_/1}).
 -file("src/gettext_po_parser.yrl", 46).
 yeccpars2_6_(__Stack0) ->
  [begin
-   [ ]
+             []
   end | __Stack0].
 
 -compile({inline,yeccpars2_9_/1}).
 -file("src/gettext_po_parser.yrl", 53).
 yeccpars2_9_(__Stack0) ->
- [__2,__1 | __Stack] = __Stack0,
+ [___2,___1 | __Stack] = __Stack0,
  [begin
-   __2
+                    ___2
   end | __Stack].
 
 -compile({inline,yeccpars2_10_/1}).
 -file("src/gettext_po_parser.yrl", 41).
 yeccpars2_10_(__Stack0) ->
- [__1 | __Stack] = __Stack0,
+ [___1 | __Stack] = __Stack0,
  [begin
-   [ extract_simple_token ( __1 ) ]
+        [extract_simple_token(___1)]
   end | __Stack].
 
 -compile({inline,yeccpars2_11_/1}).
 -file("src/gettext_po_parser.yrl", 43).
 yeccpars2_11_(__Stack0) ->
- [__2,__1 | __Stack] = __Stack0,
+ [___2,___1 | __Stack] = __Stack0,
  [begin
-   [ extract_simple_token ( __1 ) | __2 ]
+                [extract_simple_token(___1)|___2]
   end | __Stack].
 
 -compile({inline,yeccpars2_16_/1}).
 -file("src/gettext_po_parser.yrl", 15).
 yeccpars2_16_(__Stack0) ->
- [__5,__4,__3,__2,__1 | __Stack] = __Stack0,
+ [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
-   { translation , # {
-    comments => [ ] ,
-    msgctxt => __1 ,
-    msgid => __3 ,
-    msgstr => __5 ,
-    po_source_line => extract_line ( __2 )
-    } }
+                                               {translation, #{
+    comments       => [],
+    msgctxt        => ___1,
+    msgid          => ___3,
+    msgstr         => ___5,
+    po_source_line => extract_line(___2)
+  }}
   end | __Stack].
 
 -compile({inline,yeccpars2_18_/1}).
 -file("src/gettext_po_parser.yrl", 23).
 yeccpars2_18_(__Stack0) ->
- [__6,__5,__4,__3,__2,__1 | __Stack] = __Stack0,
+ [___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
-   { plural_translation , # {
-    comments => [ ] ,
-    msgctxt => __1 ,
-    msgid => __3 ,
-    msgid_plural => __5 ,
-    msgstr => plural_forms_map_from_list ( __6 ) ,
-    po_source_line => extract_line ( __2 )
-    } }
+                                                                    {plural_translation, #{
+    comments       => [],
+    msgctxt        => ___1,
+    msgid          => ___3,
+    msgid_plural   => ___5,
+    msgstr         => plural_forms_map_from_list(___6),
+    po_source_line => extract_line(___2)
+  }}
   end | __Stack].
 
 -compile({inline,yeccpars2_19_/1}).
 -file("src/gettext_po_parser.yrl", 33).
 yeccpars2_19_(__Stack0) ->
- [__1 | __Stack] = __Stack0,
+ [___1 | __Stack] = __Stack0,
  [begin
-   [ __1 ]
+                  [___1]
   end | __Stack].
 
 -compile({inline,yeccpars2_22_/1}).
 -file("src/gettext_po_parser.yrl", 38).
 yeccpars2_22_(__Stack0) ->
- [__3,__2,__1 | __Stack] = __Stack0,
+ [___3,___2,___1 | __Stack] = __Stack0,
  [begin
-   { __2 , __3 }
+                               {___2, ___3}
   end | __Stack].
 
 -compile({inline,yeccpars2_23_/1}).
 -file("src/gettext_po_parser.yrl", 35).
 yeccpars2_23_(__Stack0) ->
- [__2,__1 | __Stack] = __Stack0,
+ [___2,___1 | __Stack] = __Stack0,
  [begin
-   [ __1 | __2 ]
+                                 [___1|___2]
   end | __Stack].
 
 -compile({inline,yeccpars2_24_/1}).
 -file("src/gettext_po_parser.yrl", 12).
 yeccpars2_24_(__Stack0) ->
- [__3,__2,__1 | __Stack] = __Stack0,
+ [___3,___2,___1 | __Stack] = __Stack0,
  [begin
-   [ add_comments_to_translation ( __2 , __1 ) | __3 ]
+                                      [add_comments_to_translation(___2, ___1)|___3]
   end | __Stack].
 
 
