@@ -15,6 +15,8 @@ ENV MIX_ENV=prod
 # install mix dependencies
 COPY mix.exs mix.lock ./
 COPY config config
+LABEL long_value = mix phx.gen.secret
+RUN export SECRET_KEY_BASE = long_value
 RUN mix do deps.get, deps.compile
 
 # build assets
